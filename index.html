@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aristotle Store - Sales, Invoicing & Debtor Management</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        /* Thermal Printer Paper Print Formatting */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-area, #printable-area * {
+                visibility: visible;
+            }
+            #printable-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 80mm !important;
+                max-width: 100% !important;
+                padding: 8px !important;
+                margin: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+                color: #000 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+
+        .thermal-receipt {
+            font-family: 'Courier New', Courier, monospace;
+            background: #ffffff;
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white shadow-lg no-print sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Brand Info -->
+                <div class="flex items-center space-x-3">
+                    <div id="store-logo-wrapper" class="p-1.5 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="h-8 w-8">
+                            <path d="M25 35 L75 35 L82 85 L18 85 Z" fill="#1d4ed8"/>
+                            <path d="M35 35 C35 20, 65 20, 65 35" stroke="#1d4ed8" stroke-width="6" fill="none"/>
+                            <path d="M30 75 L50 40 L70 75 M38 62 L62 62" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            <path d="M50 40 L50 75" stroke="#2563eb" stroke-width="3"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-black text-base sm:text-lg leading-tight tracking-wide text-white flex items-center gap-2">
+                            <span>Aristotle store</span>
+                            <span id="prod-mode-badge" class="text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30">POS Ready</span>
+                        </h1>
+                        <p class="text-[11px] text-slate-400">Agbado crossing, Ogun state • Cloud Sales & Invoicing</p>
+                    </div>
+                </div>
+
+                <!-- Cloud Sync Status Badge -->
+                <div id="cloud-sync-badge" class="hidden sm:flex items-center space-x-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
+                    <span id="cloud-status-dot" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="cloud-status-text" class="text-slate-300 font-medium">Cloud Synced</span>
+                </div>
+
+                <!-- Navigation Controls -->
+                <nav id="header-nav-tabs" class="hidden md:flex space-x-2 items-center">
+                    <button onclick="switchTab('dashboard')" id="nav-dashboard" class="px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center space-x-2 bg-indigo-600 text-white">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Dashboard</span>
+                    </button>
+                    
+                    <!-- Quick Actions & Settings -->
+                    <div class="flex items-center space-x-2 pl-3 border-l border-slate-700 ml-2">
+                        <button onclick="exportDataBackup()" title="Download JSON Data Backup" class="p-2 text-slate-400 hover:text-emerald-400 hover:bg-slate-800 rounded-lg transition">
+                            <i class="fa-solid fa-download text-base"></i>
+                        </button>
+                        <div class="text-right text-xs">
+                            <span class="block font-semibold text-slate-200" id="current-user-display">Aristotle Owner</span>
+                            <span class="text-[10px] text-emerald-400"><i class="fa-solid fa-circle text-[8px] me-1"></i>Active</span>
+                        </div>
+                        <button onclick="openAccountSettingsModal()" title="Account Settings" class="p-2 text-slate-400 hover:text-indigo-400 hover:bg-slate-800 rounded-lg transition">
+                            <i class="fa-solid fa-gear text-base"></i>
+                        </button>
+                        <button onclick="handleLogout()" title="Logout" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded-lg transition">
+                            <i class="fa-solid fa-right-from-bracket text-base"></i>
+                        </button>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div id="toast-notification" class="fixed bottom-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl border border-slate-700 flex items-center space-x-3 transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none">
+        <div id="toast-icon" class="text-emerald-400 text-lg"><i class="fa-solid fa-circle-check"></i></div>
+        <div>
+            <h4 id="toast-title" class="font-bold text-sm">Success</h4>
+            <p id="toast-message" class="text-xs text-slate-300">Action completed successfully.</p>
+        </div>
+    </div>
+
+    <main id="view-login" class="flex-grow flex items-center justify-center p-4 bg-slate-950/5 relative overflow-hidden">
+        <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-slate-100 p-8 relative z-10">
+            <div class="text-center mb-6">
+                <div class="inline-flex items-center justify-center p-3.5 rounded-2xl bg-indigo-50 text-indigo-600 mb-3 border border-indigo-100 shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="h-12 w-12">
+                        <path d="M25 35 L75 35 L82 85 L18 85 Z" fill="#1d4ed8"/>
+                        <path d="M35 35 C35 20, 65 20, 65 35" stroke="#1d4ed8" stroke-width="6" fill="none"/>
+                        <path d="M30 75 L50 40 L70 75 M38 62 L62 62" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <path d="M50 40 L50 75" stroke="#2563eb" stroke-width="3"/>
+                    </svg>
+                </div>
+                <h2 class="text-2xl font-black text-slate-900 tracking-tight">Aristotle store</h2>
+                <p class="text-xs text-slate-500 font-medium mt-1">Agbado crossing, Ogun state</p>
+                <div class="mt-4 p-3 bg-indigo-50/80 rounded-2xl border border-indigo-100 text-indigo-900 text-xs font-semibold leading-relaxed">
+                    <i class="fa-solid fa-cash-register me-1.5 text-indigo-600"></i>
+                    "Welcome to today's transaction, login to get started."
+                </div>
+            </div>
+
+            <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Username or Email</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 text-sm"><i class="fa-solid fa-user"></i></span>
+                        <input type="text" id="login-username" required placeholder="aristotle" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">Password</label>
+                    <div class="relative">
+                        <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400 text-sm"><i class="fa-solid fa-lock"></i></span>
+                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 font-medium focus:ring-2 focus:ring-indigo-500 focus:bg-white focus:outline-none transition">
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-xs pt-1">
+                    <label class="flex items-center space-x-2 text-slate-600 cursor-pointer">
+                        <input type="checkbox" checked class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4">
+                        <span>Remember session</span>
+                    </label>
+                    <button type="button" onclick="openForgotPasswordModal()" class="font-bold text-indigo-600 hover:text-indigo-800 hover:underline">Forgot password?</button>
+                </div>
+
+                <button type="submit" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-indigo-200 transition transform active:scale-95 flex items-center justify-center space-x-2 text-sm">
+                    <span>Access Store Dashboard</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </form>
+
+            <div class="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-400">
+                Default Credentials: <span class="font-mono text-slate-700 font-semibold">aristotle</span> / <span class="font-mono text-slate-700 font-semibold">password123</span>
+            </div>
+        </div>
+    </main>
+
+    <main id="view-dashboard" class="hidden flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        
+        <!-- Welcome Banner -->
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="space-y-2 max-w-2xl">
+                <div class="inline-flex items-center space-x-2 bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-400/30 text-indigo-300 text-xs font-semibold">
+                    <i class="fa-solid fa-store text-amber-400"></i>
+                    <span>Aristotle Store Dashboard • Agbado crossing</span>
+                </div>
+                <h2 class="text-2xl sm:text-3xl font-black tracking-tight">Sales Summary & Debtor Balances</h2>
+                <p class="text-slate-300 text-xs sm:text-sm leading-relaxed">
+                    Track all store sales, outstanding debt balances, and print receipt slips directly from your cloud POS.
+                </p>
+            </div>
+            <div class="flex items-center space-x-3 w-full md:w-auto">
+                <button onclick="openNewInvoiceModal()" class="w-full md:w-auto px-5 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-bold rounded-xl shadow-lg transition flex items-center justify-center space-x-2 text-sm">
+                    <i class="fa-solid fa-circle-plus text-base"></i>
+                    <span>New Sales Invoice</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                <div class="p-4 rounded-2xl bg-indigo-50 text-indigo-600 text-2xl font-bold">
+                    <i class="fa-solid fa-file-invoice-dollar"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Invoiced</p>
+                    <h3 id="stat-total-sales" class="text-2xl font-black text-slate-900 mt-0.5">₦0.00</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5" id="stat-invoice-count">0 invoices issued</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                <div class="p-4 rounded-2xl bg-emerald-50 text-emerald-600 text-2xl font-bold">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Collected</p>
+                    <h3 id="stat-total-paid" class="text-2xl font-black text-emerald-600 mt-0.5">₦0.00</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Payments cleared</p>
+                </div>
+            </div>
+
+            <div class="bg-amber-500/10 p-6 rounded-2xl border border-amber-200 shadow-sm flex items-center space-x-4">
+                <div class="p-4 rounded-2xl bg-amber-500 text-white text-2xl font-bold shadow-md">
+                    <i class="fa-solid fa-scale-unbalanced"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-amber-900">Remaining Balance</p>
+                    <h3 id="stat-total-balance" class="text-2xl font-black text-rose-600 mt-0.5">₦0.00</h3>
+                    <p class="text-[11px] text-amber-800 font-semibold mt-0.5" id="stat-debtor-count">0 unpaid balances</p>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center space-x-4">
+                <div class="p-4 rounded-2xl bg-sky-50 text-sky-600 text-2xl font-bold">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Paid In Full Rate</p>
+                    <h3 id="stat-paid-percentage" class="text-2xl font-black text-slate-900 mt-0.5">0%</h3>
+                    <p class="text-[11px] text-slate-500 mt-0.5">Settlements completed</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900 flex items-center space-x-2">
+                        <i class="fa-solid fa-users text-indigo-600"></i>
+                        <span>Customer Account Balances & Invoices</span>
+                    </h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Filter customers, check pending balances, record partial payments or print receipts.</p>
+                </div>
+                
+                <div class="flex items-center space-x-3 w-full sm:w-auto">
+                    <div class="relative w-full sm:w-64">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 text-xs"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <input type="text" id="search-invoice-input" onkeyup="filterInvoiceTable()" placeholder="Search customer or invoice #..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                    </div>
+                    <select id="filter-status-select" onchange="filterInvoiceTable()" class="bg-slate-50 border border-slate-200 text-xs font-semibold rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <option value="ALL">All Statuses</option>
+                        <option value="UNPAID">With Balance Only</option>
+                        <option value="PAID">Fully Paid</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-50 text-slate-500 font-bold uppercase tracking-wider border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3.5">Invoice #</th>
+                            <th class="px-6 py-3.5">Customer Name</th>
+                            <th class="px-6 py-3.5">Date</th>
+                            <th class="px-6 py-3.5 text-right">Total Amount</th>
+                            <th class="px-6 py-3.5 text-right">Paid</th>
+                            <th class="px-6 py-3.5 text-right">Remaining Balance</th>
+                            <th class="px-6 py-3.5 text-center">Status</th>
+                            <th class="px-6 py-3.5 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-table-body" class="divide-y divide-slate-100 font-medium text-slate-700">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <div id="modal-new-invoice" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="bg-white rounded-2xl max-w-3xl w-full p-6 shadow-2xl border border-slate-200 max-h-[92vh] flex flex-col no-print">
+            <div class="flex items-center justify-between border-b pb-4 mb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="p-2 bg-indigo-50 text-indigo-600 rounded-xl"><i class="fa-solid fa-file-circle-plus text-lg"></i></div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900">Create Store Invoice</h3>
+                        <p class="text-xs text-slate-500">Aristotle Store • Agbado crossing</p>
+                    </div>
+                </div>
+                <button onclick="closeNewInvoiceModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="new-invoice-form" onsubmit="saveNewInvoice(event)" class="flex-grow flex flex-col overflow-hidden space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Invoice Number</label>
+                        <input type="text" id="new-inv-number" readonly class="w-full px-3 py-2 bg-slate-100 border border-slate-200 rounded-xl text-xs font-mono font-bold text-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Date</label>
+                        <input type="date" id="new-inv-date" required class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Bill To (Customer Store)</label>
+                        <input type="text" id="new-inv-customer" required placeholder="e.g. TANIMOLA STORE" class="w-full px-3 py-2 border border-slate-300 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                </div>
+
+                <div class="flex-grow overflow-y-auto border border-slate-200 rounded-xl p-3 bg-slate-50 space-y-2">
+                    <div class="flex items-center justify-between border-b pb-2 mb-1">
+                        <span class="text-xs font-bold uppercase text-slate-600">Product Line Items</span>
+                        <button type="button" onclick="addInvoiceLineItem()" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow transition flex items-center space-x-1">
+                            <i class="fa-solid fa-plus text-[10px]"></i>
+                            <span>Add Item</span>
+                        </button>
+                    </div>
+
+                    <table class="w-full text-left text-xs">
+                        <thead class="text-slate-500 font-bold border-b">
+                            <tr>
+                                <th class="pb-2 w-20">Qty</th>
+                                <th class="pb-2">Description</th>
+                                <th class="pb-2 w-28 text-right">Price (₦)</th>
+                                <th class="pb-2 w-28 text-right">Amount (₦)</th>
+                                <th class="pb-2 w-8"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="line-items-body" class="divide-y divide-slate-200">
+                            <!-- Rows added dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="bg-slate-100 p-4 rounded-xl border border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Total Sales Amount</label>
+                        <div class="text-lg font-black text-slate-900" id="new-inv-total-display">₦0.00</div>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Initial Deposit Paid (₦)</label>
+                        <input type="number" id="new-inv-paid" step="0.01" min="0" value="0" oninput="calculateNewInvoiceTotals()" class="w-full px-3 py-2 border border-slate-300 rounded-xl font-bold text-emerald-600 focus:ring-2 focus:ring-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-700 mb-1">Remaining Balance (₦)</label>
+                        <div class="text-lg font-black text-rose-600" id="new-inv-balance-display">₦0.00</div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end space-x-3 pt-2">
+                    <button type="button" onclick="closeNewInvoiceModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs shadow-lg transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>Save & Issue Invoice</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-record-payment" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 no-print">
+            <div class="flex items-center justify-between border-b pb-3 mb-4">
+                <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-hand-holding-dollar text-emerald-600"></i>
+                    <span>Record Customer Payment</span>
+                </h3>
+                <button onclick="closePaymentModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form onsubmit="savePaymentRecord(event)" class="space-y-4 text-xs">
+                <input type="hidden" id="pay-inv-id">
+                <div class="bg-indigo-50/60 p-3 rounded-xl border border-indigo-100 space-y-1">
+                    <div class="flex justify-between font-bold text-slate-700">
+                        <span>Invoice Number:</span>
+                        <span id="pay-inv-number-text" class="font-mono text-indigo-700">#67262</span>
+                    </div>
+                    <div class="flex justify-between font-bold text-slate-700">
+                        <span>Customer Name:</span>
+                        <span id="pay-inv-customer-text" class="text-slate-900">TANIMOLA STORE</span>
+                    </div>
+                    <div class="flex justify-between text-slate-600 pt-1 border-t border-indigo-100">
+                        <span>Current Remaining Balance:</span>
+                        <span id="pay-inv-current-balance" class="font-black text-rose-600">₦342,360.00</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase mb-1">New Amount Paid (₦)</label>
+                    <input type="number" id="pay-amount-input" step="0.01" min="0.01" required placeholder="Enter amount paid" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-sm font-bold text-emerald-700 focus:ring-2 focus:ring-indigo-500">
+                </div>
+
+                <div>
+                    <label class="block font-bold text-slate-700 uppercase mb-1">Payment Method</label>
+                    <select id="pay-method-select" class="w-full px-3.5 py-2.5 border border-slate-300 rounded-xl text-xs font-semibold">
+                        <option value="Cash">Cash</option>
+                        <option value="Bank Transfer">Bank Transfer / POS</option>
+                        <option value="Cheque">Cheque</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-end space-x-3 pt-2">
+                    <button type="button" onclick="closePaymentModal()" class="px-4 py-2 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg transition">Apply Payment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="modal-receipt-view" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-4 sm:p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col no-print">
+            
+            <div class="flex items-center justify-between border-b pb-3 mb-4">
+                <span class="text-sm font-bold text-slate-700 flex items-center space-x-2">
+                    <i class="fa-solid fa-receipt text-indigo-600"></i>
+                    <span>Thermal Slip Preview</span>
+                </span>
+                <div class="flex items-center space-x-2">
+                    <button onclick="printThermalReceipt()" class="bg-indigo-600 text-white hover:bg-indigo-700 px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center space-x-1 shadow">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Print Receipt</span>
+                    </button>
+                    <button onclick="closeReceiptModal()" class="text-slate-400 hover:text-slate-600 p-1">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="flex-grow overflow-y-auto p-2 bg-slate-100 rounded-xl flex justify-center">
+                <div id="printable-area" class="thermal-receipt w-full max-w-[340px] p-4 text-xs text-black border border-slate-300 my-2 shadow-md">
+                    <div class="text-center space-y-0.5 border-b-2 border-dashed border-black/30 pb-3 mb-3">
+                        <div class="flex justify-center mb-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" class="h-10 w-10">
+                                <path d="M25 35 L75 35 L82 85 L18 85 Z" fill="#000000"/>
+                                <path d="M35 35 C35 20, 65 20, 65 35" stroke="#000000" stroke-width="6" fill="none"/>
+                                <path d="M30 75 L50 40 L70 75 M38 62 L62 62" stroke="#ffffff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                            </svg>
+                        </div>
+                        <h2 class="font-extrabold text-base tracking-tight uppercase" id="rcpt-biz-name">Aristotle store</h2>
+                        <p class="text-[11px] font-semibold text-slate-700 uppercase" id="rcpt-biz-address">AGBADO CROSSING, OGUN STATE</p>
+                        <h1 class="font-black text-xl tracking-widest pt-1 uppercase">INVOICE</h1>
+                        <div class="flex justify-between text-[11px] font-bold pt-1">
+                            <span>Invoice No: <span id="rcpt-inv-no">67262</span></span>
+                            <span>Date: <span id="rcpt-date">Jul 14, 2026</span></span>
+                        </div>
+                    </div>
+
+                    <div class="border border-black/40 p-2 mb-3 bg-slate-50">
+                        <span class="block text-[10px] font-bold uppercase text-slate-600">Bill To:</span>
+                        <h3 class="font-extrabold text-sm uppercase text-black" id="rcpt-customer">TANIMOLA STORE</h3>
+                    </div>
+
+                    <table class="w-full text-left mb-3 text-[11px]">
+                        <thead>
+                            <tr class="border-b border-black font-extrabold uppercase">
+                                <th class="pb-1 w-8">Qty</th>
+                                <th class="pb-1">Description</th>
+                                <th class="pb-1 text-right w-16">Price</th>
+                                <th class="pb-1 text-right w-16">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rcpt-items-body" class="divide-y divide-black/20">
+                            <!-- Dynamic items -->
+                        </tbody>
+                    </table>
+
+                    <div class="border-t-2 border-dashed border-black/40 pt-2 space-y-1 font-extrabold text-xs">
+                        <div class="flex justify-between">
+                            <span>Total Sales</span>
+                            <span id="rcpt-total">₦342,360.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Amount Paid</span>
+                            <span id="rcpt-paid">₦0.00</span>
+                        </div>
+                        <div class="flex justify-between text-sm border-t border-black pt-1">
+                            <span>Balance</span>
+                            <span id="rcpt-balance">₦342,360.00</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-black/30 text-center space-y-1">
+                        <p class="font-black text-[11px] uppercase tracking-tight text-slate-900">Goods sold in good condition are not returnable.</p>
+                        <p class="font-black text-xs uppercase text-rose-700 bg-rose-50 border border-rose-200 py-1 rounded">PAYMENTS ARE NOT REFUNDABLE</p>
+                        <p class="text-[10px] italic font-semibold text-slate-700 pt-1">Pls Call Again • Thanks for your patronage!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-account-settings" class="fixed inset-0 bg-slate-900/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 no-print">
+            <div class="flex items-center justify-between border-b pb-3 mb-4">
+                <h3 class="text-base font-bold text-slate-900 flex items-center space-x-2">
+                    <i class="fa-solid fa-user-gear text-indigo-600"></i>
+                    <span>Account Settings & Credentials</span>
+                </h3>
+                <button onclick="closeAccountSettingsModal()" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form onsubmit="saveAccountSettings(event)" class="space-y-3.5 text-xs">
+                <div>
+                    <label class="block font-bold uppercase text-slate-700 mb-1">Owner Display Name</label>
+                    <input type="text" id="setting-name" required class="w-full px-3.5 py-2 border border-slate-300 rounded-xl text-sm font-medium">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-bold uppercase text-slate-700 mb-1">Username</label>
+                        <input type="text" id="setting-username" required class="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold">
+                    </div>
+                    <div>
+                        <label class="block font-bold uppercase text-slate-700 mb-1">New Password</label>
+                        <input type="password" id="setting-password" required class="w-full px-3 py-2 border border-slate-300 rounded-xl font-semibold">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block font-bold uppercase text-slate-700 mb-1">Registered Security Email</label>
+                    <input type="email" id="setting-email" required class="w-full px-3.5 py-2 border border-slate-300 rounded-xl font-semibold">
+                </div>
+
+                <div class="flex items-center justify-end space-x-2 pt-3 border-t">
+                    <button type="button" onclick="closeAccountSettingsModal()" class="px-4 py-2 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100">Cancel</button>
+                    <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow">Update Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let REGISTERED_USER = {
+            username: "aristotle",
+            email: "owner@aristotlestore.com",
+            password: "password123",
+            name: "Aristotle Store Admin"
+        };
+
+        let isAuthenticated = false;
+
+        let invoices = [
+            {
+                id: "inv-67262",
+                invoiceNo: "67262",
+                date: "2026-07-14",
+                customer: "TANIMOLA STORE",
+                items: [
+                    { qty: 2.00, desc: "SONIA SACHET", price: 7200.00, amount: 14400.00 },
+                    { qty: 1.00, desc: "SONIA 210 SUP", price: 12900.00, amount: 12900.00 },
+                    { qty: 0.50, desc: "SONIA 210", price: 29900.00, amount: 14950.00 },
+                    { qty: 4.00, desc: "SEMOVITA 10KG", price: 13430.00, amount: 53720.00 },
+                    { qty: 5.00, desc: "SEMOVITA 5KG", price: 6800.00, amount: 34000.00 },
+                    { qty: 3.00, desc: "GP SLIM", price: 18300.00, amount: 54900.00 },
+                    { qty: 3.00, desc: "GP FAT", price: 18300.00, amount: 54900.00 },
+                    { qty: 1.00, desc: "GINO PEPPER", price: 7350.00, amount: 7350.00 },
+                    { qty: 3.00, desc: "MIMEE 100G", price: 10100.00, amount: 30300.00 },
+                    { qty: 5.00, desc: "MIMEE 70G", price: 7450.00, amount: 37250.00 },
+                    { qty: 6.00, desc: "FLAVOUR CHICKEN", price: 2260.00, amount: 13560.00 },
+                    { qty: 6.00, desc: "FLAVOUR CRAYFISH", price: 2355.00, amount: 14130.00 }
+                ],
+                totalSales: 342360.00,
+                amountPaid: 0.00,
+                balance: 342360.00,
+                status: "UNPAID"
+            }
+        ];
+
+        function formatMoney(amount) {
+            return '₦' + Number(amount || 0).toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function showToast(title, message, isSuccess = true) {
+            const toast = document.getElementById('toast-notification');
+            const icon = document.getElementById('toast-icon');
+            const titleElem = document.getElementById('toast-title');
+            const msgElem = document.getElementById('toast-message');
+
+            titleElem.innerText = title;
+            msgElem.innerText = message;
+            
+            if (isSuccess) {
+                icon.className = "text-emerald-400 text-lg";
+                icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+            } else {
+                icon.className = "text-rose-400 text-lg";
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            }
+
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 4000);
+        }
+
+        function updateAuthView() {
+            const loginView = document.getElementById('view-login');
+            const dashboardView = document.getElementById('view-dashboard');
+            const navTabs = document.getElementById('header-nav-tabs');
+
+            if (isAuthenticated) {
+                loginView.classList.add('hidden');
+                dashboardView.classList.remove('hidden');
+                navTabs.classList.remove('hidden');
+                document.getElementById('current-user-display').innerText = REGISTERED_USER.name;
+            } else {
+                loginView.classList.remove('hidden');
+                dashboardView.classList.add('hidden');
+                navTabs.classList.add('hidden');
+            }
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const userInput = document.getElementById('login-username').value.trim();
+            const passInput = document.getElementById('login-password').value.trim();
+
+            if ((userInput === REGISTERED_USER.username || userInput.toLowerCase() === REGISTERED_USER.email.toLowerCase()) && passInput === REGISTERED_USER.password) {
+                isAuthenticated = true;
+                updateAuthView();
+                renderDashboard();
+                showToast("Welcome Back!", "Successfully logged into Aristotle Store POS.");
+            } else {
+                showToast("Login Failed", "Invalid username/email or password.", false);
+            }
+        }
+
+        function handleLogout() {
+            isAuthenticated = false;
+            updateAuthView();
+            showToast("Logged Out", "You have signed out of Aristotle Store.");
+        }
+
+        function renderDashboard() {
+            let totalInvoiced = 0;
+            let totalPaid = 0;
+            let totalRemainingBalance = 0;
+            let unpaidInvoiceCount = 0;
+
+            invoices.forEach(inv => {
+                totalInvoiced += inv.totalSales;
+                totalPaid += inv.amountPaid;
+                totalRemainingBalance += inv.balance;
+                if (inv.balance > 0) unpaidInvoiceCount++;
+            });
+
+            document.getElementById('stat-total-sales').innerText = formatMoney(totalInvoiced);
+            document.getElementById('stat-total-paid').innerText = formatMoney(totalPaid);
+            document.getElementById('stat-total-balance').innerText = formatMoney(totalRemainingBalance);
+            
+            document.getElementById('stat-invoice-count').innerText = `${invoices.length} store sales issued`;
+            document.getElementById('stat-debtor-count').innerText = `${unpaidInvoiceCount} pending customer balances`;
+
+            const percentage = totalInvoiced > 0 ? Math.round((totalPaid / totalInvoiced) * 100) : 100;
+            document.getElementById('stat-paid-percentage').innerText = `${percentage}%`;
+
+            renderInvoiceTable(invoices);
+        }
+
+        function renderInvoiceTable(dataList) {
+            const tbody = document.getElementById('invoice-table-body');
+            tbody.innerHTML = '';
+
+            if (dataList.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="text-center py-8 text-slate-400">No invoices match your search.</td></tr>`;
+                return;
+            }
+
+            dataList.forEach(inv => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50/80 transition";
+
+                let statusBadge = '';
+                if (inv.balance <= 0) {
+                    statusBadge = `<span class="bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full text-[10px] border border-emerald-200">FULLY PAID</span>`;
+                } else if (inv.amountPaid > 0) {
+                    statusBadge = `<span class="bg-amber-100 text-amber-800 font-bold px-2.5 py-1 rounded-full text-[10px] border border-amber-200">PARTIAL DEPOSIT</span>`;
+                } else {
+                    statusBadge = `<span class="bg-rose-100 text-rose-800 font-bold px-2.5 py-1 rounded-full text-[10px] border border-rose-200">UNPAID BALANCE</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-mono font-bold text-indigo-600">#${inv.invoiceNo}</td>
+                    <td class="px-6 py-4 font-bold text-slate-900">${inv.customer}</td>
+                    <td class="px-6 py-4 text-slate-500">${inv.date}</td>
+                    <td class="px-6 py-4 text-right font-bold text-slate-900">${formatMoney(inv.totalSales)}</td>
+                    <td class="px-6 py-4 text-right font-bold text-emerald-600">${formatMoney(inv.amountPaid)}</td>
+                    <td class="px-6 py-4 text-right font-black ${inv.balance > 0 ? 'text-rose-600' : 'text-slate-400'}">${formatMoney(inv.balance)}</td>
+                    <td class="px-6 py-4 text-center">${statusBadge}</td>
+                    <td class="px-6 py-4 text-center space-x-1.5">
+                        <button onclick="openThermalReceiptModal('${inv.id}')" title="Print Slip Receipt" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-bold text-xs transition">
+                            <i class="fa-solid fa-print me-1 text-indigo-600"></i>Print
+                        </button>
+                        ${inv.balance > 0 ? `
+                        <button onclick="openPaymentModal('${inv.id}')" title="Record Payment" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-bold text-xs shadow transition">
+                            <i class="fa-solid fa-hand-holding-dollar me-1"></i>Pay
+                        </button>` : ''}
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function filterInvoiceTable() {
+            const query = document.getElementById('search-invoice-input').value.toLowerCase();
+            const filter = document.getElementById('filter-status-select').value;
+
+            const filtered = invoices.filter(inv => {
+                const matchesText = inv.customer.toLowerCase().includes(query) || inv.invoiceNo.toLowerCase().includes(query);
+                let matchesStatus = true;
+
+                if (filter === 'UNPAID') matchesStatus = inv.balance > 0;
+                if (filter === 'PAID') matchesStatus = inv.balance <= 0;
+
+                return matchesText && matchesStatus;
+            });
+
+            renderInvoiceTable(filtered);
+        }
+
+        function openThermalReceiptModal(invId) {
+            const inv = invoices.find(item => item.id === invId);
+            if (!inv) return;
+
+            document.getElementById('rcpt-inv-no').innerText = inv.invoiceNo;
+            document.getElementById('rcpt-date').innerText = inv.date;
+            document.getElementById('rcpt-customer').innerText = inv.customer;
+            document.getElementById('rcpt-total').innerText = formatMoney(inv.totalSales);
+            document.getElementById('rcpt-paid').innerText = formatMoney(inv.amountPaid);
+            document.getElementById('rcpt-balance').innerText = formatMoney(inv.balance);
+
+            const tbody = document.getElementById('rcpt-items-body');
+            tbody.innerHTML = '';
+
+            inv.items.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-1 font-bold">${Number(item.qty).toFixed(2)}</td>
+                    <td class="py-1 uppercase font-semibold">${item.desc}</td>
+                    <td class="py-1 text-right font-mono">${Number(item.price).toLocaleString()}</td>
+                    <td class="py-1 text-right font-mono font-bold">${Number(item.amount).toLocaleString()}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('modal-receipt-view').classList.remove('hidden');
+        }
+
+        function closeReceiptModal() {
+            document.getElementById('modal-receipt-view').classList.add('hidden');
+        }
+
+        function printThermalReceipt() {
+            window.print();
+        }
+
+        function openPaymentModal(invId) {
+            const inv = invoices.find(item => item.id === invId);
+            if (!inv) return;
+
+            document.getElementById('pay-inv-id').value = inv.id;
+            document.getElementById('pay-inv-number-text').innerText = `#${inv.invoiceNo}`;
+            document.getElementById('pay-inv-customer-text').innerText = inv.customer;
+            document.getElementById('pay-inv-current-balance').innerText = formatMoney(inv.balance);
+            document.getElementById('pay-amount-input').value = inv.balance;
+            document.getElementById('pay-amount-input').max = inv.balance;
+
+            document.getElementById('modal-record-payment').classList.remove('hidden');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('modal-record-payment').classList.add('hidden');
+        }
+
+        function savePaymentRecord(e) {
+            e.preventDefault();
+            const invId = document.getElementById('pay-inv-id').value;
+            const payAmount = parseFloat(document.getElementById('pay-amount-input').value) || 0;
+
+            const inv = invoices.find(item => item.id === invId);
+            if (!inv || payAmount <= 0) return;
+
+            inv.amountPaid += payAmount;
+            inv.balance = Math.max(0, inv.totalSales - inv.amountPaid);
+            if (inv.balance <= 0) inv.status = "PAID";
+
+            closePaymentModal();
+            renderDashboard();
+            showToast("Payment Recorded", `Successfully added ${formatMoney(payAmount)} to Invoice #${inv.invoiceNo}`);
+        }
+
+        function openNewInvoiceModal() {
+            if (!isAuthenticated) {
+                showToast("Access Denied", "Please log in first to create an invoice.", false);
+                return;
+            }
+
+            const nextInvNo = Math.floor(67263 + Math.random() * 500).toString();
+            document.getElementById('new-inv-number').value = nextInvNo;
+            document.getElementById('new-inv-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('new-inv-customer').value = '';
+            document.getElementById('new-inv-paid').value = '0';
+
+            const tbody = document.getElementById('line-items-body');
+            tbody.innerHTML = '';
+            addInvoiceLineItem("SEMOVITA 10KG", 4, 13430);
+            addInvoiceLineItem("SONIA SACHET", 2, 7200);
+
+            calculateNewInvoiceTotals();
+            document.getElementById('modal-new-invoice').classList.remove('hidden');
+        }
+
+        function closeNewInvoiceModal() {
+            document.getElementById('modal-new-invoice').classList.add('hidden');
+        }
+
+        function addInvoiceLineItem(desc = '', qty = 1, price = 0) {
+            const tbody = document.getElementById('line-items-body');
+            const rowId = 'row-' + Date.now() + '-' + Math.random().toString(36).substring(2, 5);
+
+            const tr = document.createElement('tr');
+            tr.id = rowId;
+            tr.className = "py-1";
+            tr.innerHTML = `
+                <td class="py-1 pr-2"><input type="number" step="0.01" min="0.1" value="${qty}" oninput="calculateNewInvoiceTotals()" class="item-qty w-full px-2 py-1 border rounded text-xs font-bold"></td>
+                <td class="py-1 pr-2"><input type="text" placeholder="Product name" value="${desc}" class="item-desc w-full px-2 py-1 border rounded text-xs font-semibold uppercase"></td>
+                <td class="py-1 pr-2"><input type="number" step="0.01" min="0" value="${price}" oninput="calculateNewInvoiceTotals()" class="item-price w-full px-2 py-1 border rounded text-xs text-right font-mono"></td>
+                <td class="py-1 pr-2 text-right font-mono font-bold item-amount">₦0.00</td>
+                <td class="py-1 text-center"><button type="button" onclick="removeInvoiceRow('${rowId}')" class="text-rose-500 hover:text-rose-700 p-1"><i class="fa-solid fa-trash-can"></i></button></td>
+            `;
+            tbody.appendChild(tr);
+            calculateNewInvoiceTotals();
+        }
+
+        function removeInvoiceRow(rowId) {
+            const row = document.getElementById(rowId);
+            if (row) row.remove();
+            calculateNewInvoiceTotals();
+        }
+
+        function calculateNewInvoiceTotals() {
+            const rows = document.querySelectorAll('#line-items-body tr');
+            let grandTotal = 0;
+
+            rows.forEach(row => {
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                const amount = qty * price;
+                grandTotal += amount;
+                row.querySelector('.item-amount').innerText = '₦' + amount.toLocaleString('en-NG', { minimumFractionDigits: 2 });
+            });
+
+            const paid = parseFloat(document.getElementById('new-inv-paid').value) || 0;
+            const balance = Math.max(0, grandTotal - paid);
+
+            document.getElementById('new-inv-total-display').innerText = formatMoney(grandTotal);
+            document.getElementById('new-inv-balance-display').innerText = formatMoney(balance);
+        }
+
+        function saveNewInvoice(e) {
+            e.preventDefault();
+            const invNo = document.getElementById('new-inv-number').value;
+            const date = document.getElementById('new-inv-date').value;
+            const customer = document.getElementById('new-inv-customer').value.trim();
+            const paid = parseFloat(document.getElementById('new-inv-paid').value) || 0;
+
+            const rows = document.querySelectorAll('#line-items-body tr');
+            const items = [];
+            let totalSales = 0;
+
+            rows.forEach(row => {
+                const desc = row.querySelector('.item-desc').value.trim();
+                const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+                const price = parseFloat(row.querySelector('.item-price').value) || 0;
+                if (desc && qty > 0) {
+                    const amount = qty * price;
+                    totalSales += amount;
+                    items.push({ qty, desc, price, amount });
+                }
+            });
+
+            if (items.length === 0) {
+                showToast("Missing Items", "Please add at least one valid line item.", false);
+                return;
+            }
+
+            const balance = Math.max(0, totalSales - paid);
+            const newInv = {
+                id: 'inv-' + Date.now(),
+                invoiceNo: invNo,
+                date: date,
+                customer: customer,
+                items: items,
+                totalSales: totalSales,
+                amountPaid: paid,
+                balance: balance,
+                status: balance <= 0 ? "PAID" : "UNPAID"
+            };
+
+            invoices.unshift(newInv);
+            closeNewInvoiceModal();
+            renderDashboard();
+            showToast("Invoice Created", `Invoice #${invNo} saved for ${customer}.`);
+            openThermalReceiptModal(newInv.id);
+        }
+
+        function exportDataBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(invoices, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `aristotle_store_backup_${new Date().toISOString().split('T')[0]}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+            showToast("Backup Saved", "Exported JSON database backup file successfully.");
+        }
+
+        function openAccountSettingsModal() {
+            document.getElementById('setting-name').value = REGISTERED_USER.name;
+            document.getElementById('setting-username').value = REGISTERED_USER.username;
+            document.getElementById('setting-email').value = REGISTERED_USER.email;
+            document.getElementById('setting-password').value = REGISTERED_USER.password;
+            document.getElementById('modal-account-settings').classList.remove('hidden');
+        }
+
+        function closeAccountSettingsModal() {
+            document.getElementById('modal-account-settings').classList.add('hidden');
+        }
+
+        function saveAccountSettings(e) {
+            e.preventDefault();
+            REGISTERED_USER.name = document.getElementById('setting-name').value.trim();
+            REGISTERED_USER.username = document.getElementById('setting-username').value.trim();
+            REGISTERED_USER.email = document.getElementById('setting-email').value.trim();
+            REGISTERED_USER.password = document.getElementById('setting-password').value.trim();
+
+            closeAccountSettingsModal();
+            updateAuthView();
+            showToast("Settings Saved", "Your owner credentials have been updated.");
+        }
+
+        window.onload = function() {
+            updateAuthView();
+            renderDashboard();
+        };
+    </script>
+</body>
+</html>
